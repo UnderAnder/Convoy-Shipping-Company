@@ -1,4 +1,5 @@
 import pandas as pd
+import sqlite3
 
 
 def input_file():
@@ -15,19 +16,32 @@ def correct_data(data):
     return corrected_data, modification_count
 
 
-def main():
-    data, file_name, exel = input_file()
+def check_file(data, file_name, xlsx):
     checked_file_name = f'{file_name}[CHECKED].csv'
-    file_name = f'{file_name}.csv'
-
-    count_line = data.shape[0]
-    data.to_csv(file_name, index=None)
-
+    if xlsx:
+        file_name = f'{file_name}.csv'
+        count_line = data.shape[0]
+        data.to_csv(file_name, index=None)
+        print(f"{count_line} {'lines were' if count_line > 1 else 'line was'} added to {file_name}")
     corrected, corrected_count = correct_data(data)
     corrected.to_csv(checked_file_name, index=None)
-
-    print(f"{count_line} {'lines were' if count_line > 1 else 'line was'} added to {file_name}") if exel else None
     print(f"{corrected_count} {'cells were' if corrected_count > 1 else 'cell was'} corrected in {checked_file_name}")
+    return corrected
+
+
+def write_to_sql(data, file_name):
+    conn = sqlite3.connect(f'{file_name}.s3db')
+    types = {col: 'INTEGER PRIMARY KEY' if col == 'vehicle_id' else 'INTEGER NOT NULL' for col in data.columns}
+    data.to_sql('convoy', conn, index=False, dtype=types)
+    count_line = data.shape[0]
+    print(f"{count_line} {'records were' if count_line > 1 else 'record was'} inserted into {file_name}.s3db")
+
+
+def main():
+    data, file_name, xlsx = input_file()
+    if not file_name.endswith('[CHECKED]'):
+        data = check_file(data, file_name, xlsx)
+    write_to_sql(data, file_name.removesuffix('[CHECKED]'))
 
 
 if __name__ == '__main__':
