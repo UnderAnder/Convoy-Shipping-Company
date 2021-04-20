@@ -32,6 +32,7 @@ class Convoy:
             self.check_file()
             self.write_to_sql()
         self.write_to_json()
+        self.write_to_xml()
         
     def check_file(self):
         checked_file_name = f'{self.file_name}[CHECKED].csv'
@@ -53,11 +54,22 @@ class Convoy:
         print(f"{self.size} record{'s were' if self.size > 1 else ' was'} inserted into {self.file_name}.s3db")
 
     def write_to_json(self):
-        # data.to_json(path_or_buf=f'{file_name}.json', orient='records') # array 'convoy' needed for tests
         res = {'convoy': self.data.to_dict(orient='records')}
         with open(f'{self.file_name}.json', 'w') as f:
             f.write(json.dumps(res))
         print(f"{self.size} vehicle{'s were' if self.size > 1 else ' was'} saved into {self.file_name}.json")
+
+    def write_to_xml(self):
+        def xml_row_builder(row):
+            xml = ['<{0}>{1}</{0}>'.format(field, row[field]) for field in row.index]
+            xml.insert(0, '<vehicle>')
+            xml.append('</vehicle>')
+            return '\n'.join(xml)
+        with open(f'{self.file_name}.xml', 'w') as f:
+            print('<convoy>', file=f)
+            print('\n'.join(self.data.apply(xml_row_builder, axis=1)), file=f)
+            print('</convoy>', file=f)
+        print(f"{self.size} vehicle{'s were' if self.size > 1 else ' was'} saved into {self.file_name}.xml")
 
 
 if __name__ == '__main__':
